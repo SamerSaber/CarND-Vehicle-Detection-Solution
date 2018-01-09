@@ -19,12 +19,15 @@ def get_SVCmodel():
 def train(vehicle_paths, non_vehicle_paths):
     
     
-    data_X , data_Y = dataset_preparator.prepare_dataset(vehicle_paths, non_vehicle_paths)
+    data_X , data_Y = dataset_preparator.prepare_dataset(vehicle_paths, non_vehicle_paths,False)
     
     print("Preprocess {} images".format(len(data_X)))
     features = []
-    for i in data_X:
-        features.append(extract_features(i, color_space="HSV", hog_channel='ALL'))
+    for image in data_X:
+        features.append(extract_features(image, color_space='YUV', spatial_size=(32, 32),
+                        hist_bins=32, orient=9, 
+                        pix_per_cell=8, cell_per_block=2, hog_channel='ALL',
+                        spatial_feat=True, hist_feat=True, hog_feat=True))
     
     features = np.array(features).astype(np.float64)
     

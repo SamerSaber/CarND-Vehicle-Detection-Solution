@@ -14,6 +14,46 @@ import cv2
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from moviepy.editor import VideoFileClip
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+import numpy as np
+import pickle
+import cv2
+from scipy.ndimage.measurements import label
+
+
+
+def add_heat(heatmap, bbox_list):
+    # Iterate through list of bboxes
+    for box in bbox_list:
+        # Add += 1 for all pixels inside each bbox
+        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
+        heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
+
+    # Return updated heatmap
+    return heatmap# Iterate through list of bboxes
+    
+def apply_threshold(heatmap, threshold):
+    # Zero out pixels below the threshold
+    heatmap[heatmap <= threshold] = 0
+    # Return thresholded map
+    return heatmap
+
+def draw_labeled_bboxes(img, labels):
+    # Iterate through all detected cars
+    for car_number in range(1, labels[1]+1):
+        # Find pixels with each car_number label value
+        nonzero = (labels[0] == car_number).nonzero()
+        # Identify x and y values of those pixels
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # Define a bounding box based on min/max x and y
+        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        # Draw the box on the image
+        cv2.rectangle(img, bbox[0], bbox[1], (0,0,255), 6)
+    # Return the image
+    return img
+
 
 def search_windows(img, windows):
 
@@ -87,7 +127,10 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None],
 
 def predict_window(model_file, image):
     image = cv2.resize(image, (64, 64)) 
-    feature = extract_features(image, color_space="HSV", hog_channel='ALL')
+    feature = extract_features(image, color_space='YUV', spatial_size=(32, 32),
+                        hist_bins=32, orient=9, 
+                        pix_per_cell=8, cell_per_block=2, hog_channel='ALL',
+                        spatial_feat=True, hist_feat=True, hog_feat=True)
     
     with open(model_file, 'rb') as f:
         model, scalar = pickle.load(f)
@@ -100,28 +143,64 @@ def predict_window(model_file, image):
     prediction = model.predict(scaled_X) 
     
     return prediction
-
+count = 0
 def process_frame(image, Debug_image = False):
     
 
-    windows = slide_window(image, x_start_stop=[None, None], y_start_stop=[int(image.shape[0]/2), int(image.shape[0])], 
-                    xy_window=(100, 100), xy_overlap=(0.7, 0.7))
-                       
+    windows = slide_window(image, x_start_stop=[None, None], y_start_stop=[int(390), int(550)], 
+                    xy_window=(64, 64), xy_overlap=(0.85, 0.85))
+    windows.extend( slide_window(image, x_start_stop=[None, None], y_start_stop=[int(390), int(image.shape[0])], 
+                    xy_window=(150, 150), xy_overlap=(0.65, 0.65)))
+
+    all_windows_img = draw_boxes(image, windows, color=(0, 0, 255), thick=6)     
     on_windows =  search_windows(image, windows)
-    window_img = draw_boxes(image, on_windows, color=(0, 0, 255), thick=6)                    
+    
+    window_img = draw_boxes(image, on_windows, color=(0, 0, 255), thick=6)     
+    heat = np.zeros_like(image[:,:,0]).astype(np.float)
+
+    # Add heat to each box in box list
+    heat = add_heat(heat,on_windows)
+        
+    # Apply threshold to help remove false positives
+    heat = apply_threshold(heat,1)
+    
+    # Visualize the heatmap when displaying    
+    heatmap = np.clip(heat, 0, 255)
+    
+    # Find final boxes from heatmap using label function
+    labels = label(heatmap)
+    draw_img = draw_labeled_bboxes(np.copy(image), labels)
+    
+
+                   
     if (Debug_image) :
+        fig = plt.figure()
+        plt.subplot(221)
+        plt.imshow(draw_img)
+        plt.title('Car Positions')
+        plt.subplot(222)
+        plt.imshow(heatmap, cmap='hot')
+        plt.title('Heat Map')
+        fig.tight_layout()
+        plt.subplot(223)
         plt.imshow(window_img)
+        plt.subplot(224)
+        plt.imshow(all_windows_img)
         plt.show()
-    return window_img
+    global count
+    cv2.imwrite("./input/"+str(count)+".jpg", cv2.cvtColor(image,cv2.COLOR_BGR2RGB))
+    cv2.imwrite("./output/"+str(count)+".jpg", cv2.cvtColor(draw_img,cv2.COLOR_BGR2RGB))
+    count += 1
+    return draw_img
 if __name__ == '__main__':
     
 
     
     static_image = False
-    
+    count = 0
     if static_image:
         #Calibrate the camera 
-        frame = mpimg.imread('./test_images/test3.jpg')
+        frame = mpimg.imread('./input/750.jpg')
         process_frame(frame, True)
         
     else:
@@ -129,7 +208,7 @@ if __name__ == '__main__':
     
         white_output = './project_video_out.mp4'
         clip1 = VideoFileClip("./project_video.mp4")
-#         clip1 = VideoFileClip("./project_video.mp4").subclip(40,50)
+#         clip1 = VideoFileClip("./project_video.mp4").subclip(30,45)
         
         #clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4")
         white_clip = clip1.fl_image(process_frame) #NOTE: this function expects color images!!

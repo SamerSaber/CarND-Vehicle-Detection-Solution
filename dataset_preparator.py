@@ -10,22 +10,27 @@ import matplotlib.pyplot as plt
 def prepare_dataset(vehicle_paths, non_vehicle_paths, histogram = False):
     data_X = []
     data_Y = []
+    c = 0
     for path in vehicle_paths :
         input_images = sorted(glob.glob(path+'/*.png'))
         for image in input_images:
-            cvImg = cv2.imread(image)
-            cvImg = cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB)
-            data_X.append(cvImg)
-            data_Y.append(1)
-            
+            if c%2 :
+                cvImg = cv2.imread(image)
+                cvImg = cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB)
+                data_X.append(cvImg)
+                data_Y.append(1)
+            c += 1
+    c = 0            
     for path in non_vehicle_paths :
         input_images = sorted(glob.glob(path+'/*.png'))
         for image in input_images:
-            cvImg = cv2.imread(image)
-            cvImg = cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB)
-            data_X.append(cvImg)
-            data_Y.append(0)
-            
+            if c%2 :
+                cvImg = cv2.imread(image)
+                cvImg = cv2.cvtColor(cvImg, cv2.COLOR_BGR2RGB)
+                data_X.append(cvImg)
+                data_Y.append(0)
+            c += 1
+                
     if (histogram) :    
         plt.figure()
         plt.hist(data_Y, bins=10)
@@ -40,9 +45,9 @@ if __name__ == '__main__':
     non_vehicle_paths = []
     vehicle_paths.append("./dataset/vehicles/GTI_Far")
     non_vehicle_paths.append("./dataset/non-vehicles/GTI")
-    data_x , data_y = prepare_dataset(vehicle_paths, non_vehicle_paths)
+    data_x , data_y = prepare_dataset(vehicle_paths, non_vehicle_paths,True)
     dataset = (data_x,data_y)
-    print (dataset)
+
 #     dataset = shuffle(dataset)
 #     
 #     for data in dataset:
