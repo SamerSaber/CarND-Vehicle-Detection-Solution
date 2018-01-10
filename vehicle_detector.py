@@ -150,7 +150,7 @@ def process_frame(image, Debug_image = False):
     windows = slide_window(image, x_start_stop=[None, None], y_start_stop=[int(390), int(550)], 
                     xy_window=(64, 64), xy_overlap=(0.85, 0.85))
     windows.extend( slide_window(image, x_start_stop=[None, None], y_start_stop=[int(390), int(image.shape[0])], 
-                    xy_window=(150, 150), xy_overlap=(0.65, 0.65)))
+                    xy_window=(150, 150), xy_overlap=(0.85, 0.85)))
 
     all_windows_img = draw_boxes(image, windows, color=(0, 0, 255), thick=6)     
     on_windows =  search_windows(image, windows)
@@ -175,17 +175,16 @@ def process_frame(image, Debug_image = False):
                    
     if (Debug_image) :
         fig = plt.figure()
-        plt.subplot(221)
+        plt.subplot(133)
         plt.imshow(draw_img)
         plt.title('Car Positions')
-        plt.subplot(222)
+        plt.subplot(132)
         plt.imshow(heatmap, cmap='hot')
         plt.title('Heat Map')
         fig.tight_layout()
-        plt.subplot(223)
+        plt.subplot(131)
+        plt.title('final windows')
         plt.imshow(window_img)
-        plt.subplot(224)
-        plt.imshow(all_windows_img)
         plt.show()
     global count
     cv2.imwrite("./input/"+str(count)+".jpg", cv2.cvtColor(image,cv2.COLOR_BGR2RGB))
@@ -200,7 +199,7 @@ if __name__ == '__main__':
     count = 0
     if static_image:
         #Calibrate the camera 
-        frame = mpimg.imread('./input/750.jpg')
+        frame = mpimg.imread('./input/215.jpg')
         process_frame(frame, True)
         
     else:
